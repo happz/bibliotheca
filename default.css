@@ -1,0 +1,88 @@
+body {
+    min-height:		768px;
+}
+
+select {
+    height:		10em !important;
+}
+
+.book-title {
+    cursor:		pointer;
+    text-decoration:	underline;
+}
+
+.author-link {
+    cursor:		pointer;
+    text-decoration:	underline;
+}
+
+.genre-link {
+    cursor:		pointer;
+    text-decoration:	underline;
+}
+
+.subject-link {
+    cursor:		pointer;
+    text-decoration:	underline;
+}
+
+.serie-link {
+    cursor:		pointer;
+    text-decoration:	underline;
+}
+
+.publisher-link {
+    cursor:		pointer;
+    text-decoration:	underline;
+}
+
+img {
+    max-width:		175px;
+}
+
+p {
+    text-align:		justify;
+}
+
+.book-preview {
+    margin-top:		5px;
+}
+
+.book-front-cover {
+    margin-right:	15px;
+}
+
+.modal-body {
+    max-height:		500px;
+}
+
+.mediumListIconTextItem-Detail h4 {
+    overflow:                   hidden;
+    max-width:                  180px;
+    white-space:                nowrap;
+}
+
+i[class*="icon-"] {
+    cursor:			pointer;
+    display:			inline-block;
+}
+
+.icon-format-large {
+    width:			60px;
+    height:			60px;
+    font-size:			60px;
+    line-height:		60px;
+    margin:			5px;
+}
+
+.format-epub {
+    color:			green;
+}
+
+.format-mobi {
+    color:			darkblue;
+}
+
+.hide {
+    display:			none;
+}

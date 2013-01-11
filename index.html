@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <!-- Mobile viewport optimized: h5bp.com/viewport -->
+    <meta name="viewport" content="width=device-width">
+
+    <!-- remove or comment this line if you want to use the local fonts -->
+    <!-- <link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'> -->
+
+    <link rel="stylesheet" type="text/css" href="bootmetro/content/css/bootstrap.css">
+    <link rel="stylesheet" type="text/css" href="bootmetro/content/css/bootstrap-responsive.css">
+    <link rel="stylesheet" type="text/css" href="bootmetro/content/css/bootmetro.css">
+    <link rel="stylesheet" type="text/css" href="bootmetro/content/css/bootmetro-tiles.css">
+    <link rel="stylesheet" type="text/css" href="bootmetro/content/css/bootmetro-charms.css">
+    <link rel="stylesheet" type="text/css" href="bootmetro/content/css/metro-ui-light.css">
+    <link rel="stylesheet" type="text/css" href="bootmetro/content/css/bootmetro-icons.css">
+    <link rel="stylesheet" type="text/css" href="bootmetro/content/css/icomoon.css">
+    <link rel="stylesheet" type="text/css" href="bootmetro/content/css/datepicker.css">
+    <link rel="stylesheet" type="text/css" href="bootmetro/content/css/daterangepicker.css">
+    <link rel="stylesheet" type="text/css" href="default.css">
+
+    <!-- Scripts -->
+    <script src="https://www.google.com/jsapi?key=ABQIAAAAnT7bvt5eCgJnKE_9xHtWrRQL0gKz-n891IYmna21nNIOzPZZixRfXXTxioGg6bd4WAedyIJq9y470A" type="text/javascript"></script>
+
+    <script src="bootmetro/scripts/modernizr-2.6.1.min.js"></script>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.js" type="text/javascript"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js" type="text/javascript"></script>
+
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <script>window.jQuery || document.write("<script src='bootmetro/scripts/jquery-1.8.2.min.js'>\x3C/script>")</script>
+
+    <script type="text/javascript" src="bootmetro/scripts/google-code-prettify/prettify.js"></script>
+    <script type="text/javascript" src="bootmetro/scripts/jquery.mousewheel.js"></script>
+    <script type="text/javascript" src="bootmetro/scripts/jquery.scrollTo.js"></script>
+    <script type="text/javascript" src="bootmetro/scripts/bootstrap.min.js"></script>
+    <script type="text/javascript" src="bootmetro/scripts/bootmetro-charms.js"></script>
+    <script type="text/javascript" src="bootmetro/scripts/demo.js"></script>
+    <script type="text/javascript" src="bootmetro/scripts/holder.js"></script>
+    <script type="text/javascript" src="bootmetro/scripts/bootstrap-datepicker.js"></script>
+
+    <script type="text/javascript" src="scripts/doT.min.js"></script>
+
+    <script type="text/javascript" src="library-data/authors.js"></script>
+    <script type="text/javascript" src="library-data/formats.js"></script>
+    <script type="text/javascript" src="library-data/genres.js"></script>
+    <script type="text/javascript" src="library-data/publishers.js"></script>
+    <script type="text/javascript" src="library-data/series.js"></script>
+    <script type="text/javascript" src="library-data/subjects.js"></script>
+    <script type="text/javascript" src="library-data/tags.js"></script>
+    <script type="text/javascript" src="library-data/books.js"></script>
+
+    <script type="text/javascript" src="scripts/library.js"></script>
+
+    <title>Knihovna</title>
+
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+    <script type="text/javascript">
+      $(document).ready(function() {
+        startup()
+      });
+    </script>
+  </head>
+
+  <body>
+    <div class="container-fluid">
+      <div class="alert fade in hide"></div>
+
+      <div class="row-fluid">
+        <form action="" method="post" id="filter_form" class="">
+          <div class="span2">
+            <div class="control-group">
+              <label class="control-label" for="filter_authors">Authors</label>
+              <div class="controls">
+                <select name="authors" id="filter_authors" multiple="multiple"></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="span2">
+            <div class="control-group">
+              <label class="control-label" for="filter_genres">Genres</label>
+              <div class="controls">
+                <select name="genres" id="filter_genres" multiple="multiple"></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="span2">
+            <div class="control-group">
+              <label class="control-label" for="filter_subjects">Subjects</label>
+              <div class="controls">
+                <select name="subjects" id="filter_subjects" multiple="multiple"></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="span2">
+            <div class="control-group">
+              <label class="control-label" for="filter_series">Series</label>
+              <div class="controls">
+                <select name="series" id="filter_series" multiple="multiple"></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="span2">
+            <div class="control-group">
+              <label class="control-label" for="filter_publishers">Publishers</label>
+              <div class="controls">
+                <select name="publishers" id="filter_publishers" multiple="multiple"></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="span2">
+            <div class="control-group">
+              <label class="control-label" for="filter_formats">Formats</label>
+              <div class="controls">
+                <select name="formats" id="filter_formats" multiple="multiple"></select>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="row-fluid">
+        <table class="table table-hover table-striped">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Authors</th>
+              <th>Genres</th>
+              <th>Subjects</th>
+              <th>Series</th>
+              <th>Publisher</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="books">
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <div id="book_info" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="Book info" aria-hidden="true"></div>
+
+  </body>
+</html>
