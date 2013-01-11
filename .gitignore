@@ -1,6 +1,4 @@
 bootmetro
-input/*
-library-data/*
 scripts/library.js
 templates/*.py
 templates/*.pyc
