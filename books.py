@@ -252,7 +252,7 @@ def load_data(data_file_path, delimiter = '\t', encoding = 'cp1250', parser = No
 
       found = False
       for book in BOOKS:
-        if book.title == new_book.title and book.subtitle == new_book.subtitle and book.issue == new_book.issue:
+        if book.title == new_book.title and book.subtitle == new_book.subtitle and book.issue == new_book.issue and cmp(sorted(book.authors), sorted(new_book.authors)) == 0:
           print 'Merge books: "%s" (%s)' % (new_book.title.encode('ascii', 'replace'), ', '.join(new_book.formats))
 
           found = True
