@@ -76,12 +76,12 @@ class FilterOption_Format extends FilterOption
 book_download_link_list = (book, format, label, icon) ->
   url = book.download_prefix + '.' + format
 
-  '<a href="' + url + '" download-url="' + url + '"><i class="icon-' + icon + ' format-' + format + ' format-download" title="' + label + '" data-placement="top"></i></a>'
+  '<a href="' + url + '" download-url="' + url + '" target="_blank"><i class="icon-' + icon + ' format-' + format + ' format-download" title="' + label + '" data-placement="top"></i></a>'
 
 book_download_link_info = (book, format, label, icon) ->
   url = book.download_prefix + '.' + format
 
-  '<a href="' + url + '" download-url="' + url + '"><i class="icon-' + icon + ' icon-format-large format-' + format + ' format-download" title="' + label + '" data-placement="top"></i></a>'
+  '<a href="' + url + '" download-url="' + url + '" target="_blank"><i class="icon-' + icon + ' icon-format-large format-' + format + ' format-download" title="' + label + '" data-placement="top"></i></a>'
 
 book_list_tmpl = doT.template '
   <tr>
@@ -204,6 +204,24 @@ refresh_ui = () ->
 
     true
 
+  vals = []
+  __per_option = (option) ->
+    if not option.filtered_list or option.filtered_list.length <= 0
+      return
+
+    values = []
+    values.push option.list[v].name for v in option.filtered_list
+    vals.push ('(' + option.name + ': ' + values.join(' OR ')  + ')')
+
+  __per_option option for own key, option of window.library.OPTIONS
+
+  html = ''
+  if vals.length > 0
+    html += vals.join(' AND ') + ' => '
+  html += window.library.current_books.length + ' books'
+
+  $('.filter-info').html html
+
 refresh_book_list = (bl) ->
   $('#books').html ''
 
@@ -279,3 +297,5 @@ startup = () ->
 
   $('#book_info').modal
     show:			false
+
+  refresh_ui()
