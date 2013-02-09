@@ -1,0 +1,37 @@
+== bibliotheca ==
+
+----
+
+Simple static web for private library - paper and basic e-book formats.
+
+I store my books' metadata in Book Collector and Calibre. This package takes
+experted list of books from both apps and creates static web, listing books,
+genres, subjects, etc. with simple search interface.
+
+Live example on http://knihovna.happz.cz/
+
+=== Input data files ===
+
+As of right now there are only two supported and tested input sources. In theory, any book (or generic) evidence software can be used as input if it's able to export list of books as CSV file.
+
+Files are downloaded by make, to change source URLs see Makefile.
+
+----
+
+Book Collector ([http://www.collectorz.com/book/ Homepage])
+
+Fields: Author, Title, Publication Year, Publisher, ISBN, Front Cover, Genre, Issue No., Last Modified, My Rating, Notes, Series, Sub Title, Subject, Tags, Plot
+
+Separator: TAB
+
+Strings enclosed in double quotes
+
+----
+
+Calibre ([http://calibre-ebook.com/ Homepage])
+
+Fields: author_sort, authors, comments, cover, formats, isbn, pubdate, publisher, rating, series, series_index, size, tags, timestamp, title, #genre, #subject, #subtitle
+
+Separator: , (comma)
+
+All values are enclosed in double quotes.
