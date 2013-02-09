@@ -1,4 +1,3 @@
 bootmetro
 scripts/library.js
-templates/*.py
-templates/*.pyc
+*.json

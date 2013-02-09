@@ -1,19 +1,28 @@
 window.library = window.library or {}
 
+window.library.books = {}
 window.library.current_books = []
 
 class FilterOption
-  constructor:			(@name, @list) ->
+  constructor:			(@name) ->
+    FO = @
+
     @fid = '#filter_' + name + 's'
     @ouid_attr = @name + '-uid'
     @ouid_class = '.' + @name + '-link'
     @list_name = name + 's'
 
-    @filtered_list = null
+    @list = null
+    @indexes = {}
 
-    $(@fid).html ''
-    $(@fid).append ('<option value="' + entry.uid + '">' + entry.name + '</option>') for own uid, entry of @list
-    $(@fid).html()
+    @selected_values = null
+
+    fetch_json_data ('/library-data/' + @name + '/list.json'), (data) ->
+      FO.list = data
+
+      $(FO.fid).html ''
+      $(FO.fid).append ('<option value="' + entry.uid + '">' + entry.name + '</option>') for own uid, entry of FO.list
+      $(FO.fid).html()
 
     $(@fid).change () ->
       filter()
@@ -26,52 +35,80 @@ class FilterOption
     false
 
   bind_click:			() ->
-    _option = @
+    FO = @
     $(@ouid_class).click (event) ->
-      _option.click event
+      FO.click event
       false
 
   filter_list:			() ->
     return ($(@fid).val() or [])
 
-  filter_per_book:		(book, list) ->
-    if list.length > 0
-      book_list = book[@list_name]
-      r = intersect book_list, list
-      if r.length <= 0
-        return false
+  filter:			() ->
+    FO = @
+    selected_values = @filter_list()
 
-      return true
+    matching_books = []
+    cnt_indexes_to_fetch = selected_values.length
+
+    merge_indexes = () ->
+      __per_selected_value = (uid) ->
+        matching_books.push book_uid for book_uid in FO.indexes[uid]
+
+      __per_selected_value uid for uid in selected_values
+
+    index_fetched = () ->
+      cnt_indexes_to_fetch -= 1
+
+      if cnt_indexes_to_fetch > 0
+        return
+
+      merge_indexes()
+
+    fetch_indexes = () ->
+      $(n for n in [0..(cnt_indexes_to_fetch - 1)]).each (m) ->
+        uid = selected_values[m]
+
+        if FO.indexes.hasOwnProperty uid
+          index_fetched()
+        else
+          fetch_json_data ('/library-data/' + FO.name + '/' + uid + '.json'), (data) ->
+            FO.indexes[uid] = data
+            index_fetched()
+
+    if cnt_indexes_to_fetch <= 0
+      merge_indexes()
+
+    else
+      fetch_indexes()
+
+    if matching_books.length <= 0
+      return null
+
+    return matching_books
 
 class FilterOption_Author extends FilterOption
   constructor:			() ->
-    super 'author', authors
+    super 'author'
 
 class FilterOption_Genre extends FilterOption
   constructor:			() ->
-    super 'genre', genres
+    super 'genre'
 
 class FilterOption_Subject extends FilterOption
   constructor:			() ->
-    super 'subject', subjects
+    super 'subject'
 
 class FilterOption_Serie extends FilterOption
   constructor:			() ->
-    super 'serie', series
-
-  filter_per_book:		(book, list) ->
-    if not book.series
-      return false
-
-    super book, list
+    super 'serie'
 
 class FilterOption_Publisher extends FilterOption
   constructor:			() ->
-    super 'publisher', publishers
+    super 'publisher'
 
 class FilterOption_Format extends FilterOption
   constructor:			() ->
-    super 'format', formats
+    super 'format'
 
 book_download_link_list = (book, format, label, icon) ->
   url = book.download_prefix + '.' + format
@@ -88,31 +125,32 @@ book_list_tmpl = doT.template '
     <td><span class="book-title" book-uid="{{= it.uid}}">{{= it.title}}</span></td>
     <td>
       {{~ it.authors :uid:aindex}}
-        <span class="author-link" author-uid="{{= uid}}">{{= authors[uid].name}}</span>
+        <span class="author-link" author-uid="{{= uid}}">{{= window.library.OPTIONS["author"].list[uid].name}}</span>
       {{~}}
     </td>
     <td>
+      {{ it.genres.sort(function (x, y) {return x.localeCompare(y)}); }}
       {{~ it.genres :uid:aindex}}
-        <span class="genre-link" genre-uid="{{= uid}}">{{= genres[uid].name}}</span>
+        <span class="genre-link" genre-uid="{{= uid}}">{{= window.library.OPTIONS["genre"].list[uid].name}}</span>
       {{~}}
     </td>
     <td>
       {{~ it.subjects :uid:aindex}}
-        <span class="subject-link" subject-uid="{{= uid}}">{{= subjects[uid].name}}</span>
+        <span class="subject-link" subject-uid="{{= uid}}">{{= window.library.OPTIONS["subject"].list[uid].name}}</span>
       {{~}}
     </td>
     <td>
       <ul class="unstyled">
         {{~ it.series :uid:aindex}}
           <li>
-            <span class="serie-link" serie-uid="{{= uid}}">{{= series[uid].name}}{{? it.issue != null}} - {{= it.issue}}.{{?}}</span>
+            <span class="serie-link" serie-uid="{{= uid}}">{{= window.library.OPTIONS["serie"].list[uid].name}}{{? it.issue != null}} - {{= it.issue}}.{{?}}</span>
           </li>
         {{~}}
       </ul>
     </td>
     <td>
       {{~ it.publishers :uid:pindex}}
-        <span class="publisher-link" publisher-uid="{{= uid}}">{{= publishers[uid].name}}</span>
+        <span class="publisher-link" publisher-uid="{{= uid}}">{{= window.library.OPTIONS["publisher"].list[uid].name}}</span>
       {{~}}
     </td>
     <td>
@@ -147,18 +185,20 @@ book_info_tmpl = doT.template '
 
       <div>
         {{~ it.authors :author_uid:index}}
-          {{ author = authors[author_uid]; }}
+          {{ author = window.library.OPTIONS["author"].list[author_uid]; }}
           <span class="author-link" author-uid="{{= author.uid}}">{{= author.name}}</span>
         {{~}}
       </div>
 
-      {{? it.publishers}}
+      {{? it.publishers && it.publishers.length > 0}}
         <div>
           Published by
           {{~ it.publishers :uid:index}}
-            <span class="publisher-link" publisher-uid="{{= uid}}">{{= publishers[uid].name}}</span>
+            <span class="publisher-link" publisher-uid="{{= uid}}">{{= window.library.OPTIONS["publisher"].list[uid].name}}</span>
           {{~}}
-          ({{= it.publication_year}})
+          {{? it.publication_year}}
+            ({{= it.publication_year}})
+          {{?}}
         </div>
       {{?}}
 
@@ -190,6 +230,16 @@ book_info_tmpl = doT.template '
   </div>
 '
 
+fetch_json_data = (url, callback) ->
+  opts =
+    dataType:			'json'
+    url:			url
+    async:			false
+    success:			(data) ->
+      callback data
+
+  $.ajax url, opts
+
 intersect = (a, b) ->
   [a, b] = [b, a] if a.length > b.length
   value for value in a when value in b
@@ -206,11 +256,11 @@ refresh_ui = () ->
 
   vals = []
   __per_option = (option) ->
-    if not option.filtered_list or option.filtered_list.length <= 0
+    if not option.selected_values or option.selected_values.length <= 0
       return
 
     values = []
-    values.push option.list[v].name for v in option.filtered_list
+    values.push option.list[v].name for v in option.selected_values
     vals.push ('(' + option.name + ': ' + values.join(' OR ')  + ')')
 
   __per_option option for own key, option of window.library.OPTIONS
@@ -225,54 +275,87 @@ refresh_ui = () ->
 refresh_book_list = (bl) ->
   $('#books').html ''
 
-  option.filtered_list = option.filter_list() for own key, option of window.library.OPTIONS
+  cnt_books_to_fetch = bl.length
 
-  $('#books').append book_list_tmpl book for book in bl
+  render_book_list = () ->
+    option.selected_values = option.filter_list() for own key, option of window.library.OPTIONS
 
-  option.bind_click() for own key, option of window.library.OPTIONS
+    book_list = []
+    book_list.push window.library.books[uid] for uid in bl
 
-  refresh_ui()
+    book_list.sort (x, y) ->
+      x.title.localeCompare y.title
 
-  $('.book-title').off 'click'
-  $('.book-title').click (event) ->
-    book = books[$(event.currentTarget).attr 'book-uid']
+    $('#books').append book_list_tmpl book for book in book_list
 
-    $('#book_info').html book_info_tmpl book
+    option.bind_click() for own key, option of window.library.OPTIONS
 
     refresh_ui()
 
-    $('.author-link').click (event) ->
-      $('#book_info').modal 'hide'
-      window.library.OPTIONS.author.click event
-      false
+    $('.book-title').off 'click'
+    $('.book-title').click (event) ->
+      book = window.library.books[$(event.currentTarget).attr 'book-uid']
 
-    $('.publisher-link').click (event) ->
-      $('#book_info').modal 'hide'
-      window.library.OPTIONS.publisher.click event
-      false
+      $('#book_info').html book_info_tmpl book
 
-    $('.btn-close').click () ->
-      $('#book_info').modal 'hide'
+      refresh_ui()
 
-    $('#book_info').modal 'show'
+      $('.author-link').click (event) ->
+        $('#book_info').modal 'hide'
+        window.library.OPTIONS.author.click event
+        false
+
+      $('.publisher-link').click (event) ->
+        $('#book_info').modal 'hide'
+        window.library.OPTIONS.publisher.click event
+        false
+
+      $('.btn-close').click () ->
+        $('#book_info').modal 'hide'
+
+      $('#book_info').modal 'show'
+
+  fetch_books = () ->
+    $(n for n in [0..(cnt_books_to_fetch - 1)]).each (m) ->
+      uid = bl[m]
+
+      if not window.library.books.hasOwnProperty uid
+        fetch_json_data ('/library-data/books/' + uid + '.json'), (data) ->
+          window.library.books[uid] = data
+
+  if cnt_books_to_fetch > 0
+    fetch_books()
+
+  render_book_list()
 
 filter = () ->
+  $('.filter-running').show()
+
   matching_books = []
   selected_options = 0
 
-  option.filtered_list = option.filter_list() for own key, option of window.library.OPTIONS
-  (if option.filtered_list.length > 0 then selected_options += 1) for own key, option of window.library.OPTIONS
+  option.selected_values = option.filter_list() for own key, option of window.library.OPTIONS
+  (if option.selected_values.length > 0 then selected_options += 1) for own key, option of window.library.OPTIONS
 
   if selected_options > 0
-    __per_book = (book) ->
-      matched_rules = 0
+    matching_books = null
 
-      (if option.filter_per_book(book, option.filtered_list) == true then matched_rules += 1) for own key, option of window.library.OPTIONS
+    __per_option = (option) ->
+      option_matching_books = option.filter()
 
-      if matched_rules >= selected_options
-        matching_books.push book
+      if matching_books == null
+        matching_books = option_matching_books
 
-    __per_book book for own uid, book of books
+      if option_matching_books
+        if matching_books == null
+          matching_books = option_matching_books
+        else
+          matching_books = intersect matching_books, option_matching_books
+
+    __per_option option for own key, option of window.library.OPTIONS
+
+    if matching_books == null
+      matching_books = []
 
     window.library.current_books = matching_books
 
@@ -280,6 +363,8 @@ filter = () ->
     window.library.current_books = []
 
   refresh_book_list window.library.current_books
+
+  $('.filter-running').hide()
 
 startup = () ->
   window.library.OPTIONS =

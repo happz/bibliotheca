@@ -3,6 +3,8 @@
 import codecs
 import collections
 import hashlib
+import json
+import locale
 import mako.exceptions
 import mako.lookup
 import mako.template
@@ -13,6 +15,8 @@ import sys
 import traceback
 import types
 import urllib
+
+locale.setlocale(locale.LC_ALL, 'cs_CZ.UTF-8')
 
 workdir = os.path.dirname(sys.argv[0])
 
@@ -61,7 +65,7 @@ class Parser(object):
     self.check_br_field(kwargs, br, 'subjects', lambda v: self.parse_multifield(SUBJECTS, lambda name: Subject(name = name), v))
     self.check_br_field(kwargs, br, 'tags', lambda v: self.parse_multifield(TAGS, lambda name: Tag(name = name), v))
     self.check_br_field(kwargs, br, 'plot', unicode)
-    self.check_br_field(kwargs, br, 'formats', lambda v: [e.strip() for e in v.split(',')])
+    self.check_br_field(kwargs, br, 'formats', lambda v: [FORMATS[e.strip()] for e in v.split(',')])
     self.check_br_field(kwargs, br, 'download_prefix', unicode)
 
   def update_book(self, record, book):
@@ -89,6 +93,8 @@ class ParserCalibre(Parser):
 
     if len(l2[6]) > 0:
       l2[6] = l2[6].split('-')[0]
+      if int(l2[6]) < 1000:
+        l2[6] = ''
 
     if len(l2[9]) <= 0:
       l2[10] = ''
@@ -97,7 +103,7 @@ class ParserCalibre(Parser):
       l2[10] = l2[10].split('.')[0]
 
     if len(l2[15]) > 0:
-      l2[15] = ','.join(eval(l2[15]))
+      l2[15] = ';'.join(eval(l2[15]))
 
     # 'authors', 'title', 'publication_year', 'publishers', 'ISBN', 'front_cover', 'genres', 'issue', 'mtime', 'rating', 'notes', 'series', 'subtitle', 'subjects', 'tags', 'plot', 'formats', 'download_prefix'
     # author_sort,authors,comments,cover,formats,isbn,pubdate,publisher,rating,series,series_index,size,tags,timestamp,title,#genre,#subject,#subtitle,download_prefix
@@ -110,7 +116,7 @@ class ParserBookCollector(Parser):
   def split_line(self, line):
     l1 = [e[1:-1] for e in line.strip().split('\t')] + ['paper']
 
-    l1.append('')
+    l1 += ['']
 
     if len(l1[5]) > 0:
       l1[5] = ParserBookCollector.COVER_PREFIX + '/' + l1[5].split('\\')[-1]
@@ -195,15 +201,25 @@ TAGS		= {}
 SERIES		= {}
 
 FORMATS		= {
-  'paper':			Format._make(['paper', 'Paper', []]),
-  'pdf':			Format._make(['pdf', 'PDF', []]),
-  'mobi':			Format._make(['mobi', 'MOBI (Kindle)', []]),
-  'epub':			Format._make(['epub', 'EPUB (iPad)', []])
+  'paper':			Format._make(['paper', u'Paper', []]),
+  'pdf':			Format._make(['pdf', u'PDF', []]),
+  'mobi':			Format._make(['mobi', u'MOBI (Kindle)', []]),
+  'epub':			Format._make(['epub', u'EPUB (iPad)', []]),
+  'zip':			Format._make(['zip', u'ZIP', []]),
+  'odt':			Format._make(['odt', u'ODT (OpenOffice)', []]),
+  'txt':			Format._make(['txt', u'TXT', []]),
+  'doc':			Format._make(['doc', u'DOC (MS Office)', []]),
+  'docx':			Format._make(['docx', u'DOCX ()', []]),
+  'pdb':			Format._make(['pdb', u'PDB ()', []]),
 }
+
+FORMATS_HIDDEN = ['zip', 'odt', 'txt', 'doc', 'docx', 'pdb']
 
 BOOKS		= []
 
 def load_data(data_file_path, delimiter = '\t', encoding = 'cp1250', parser = None):
+  merged_books = []
+
   with codecs.open(data_file_path, encoding = encoding) as f:
     i = 0
     first = True
@@ -253,7 +269,7 @@ def load_data(data_file_path, delimiter = '\t', encoding = 'cp1250', parser = No
       found = False
       for book in BOOKS:
         if book.title == new_book.title and book.subtitle == new_book.subtitle and book.issue == new_book.issue and cmp(sorted(book.authors), sorted(new_book.authors)) == 0:
-          print 'Merge books: "%s" (%s)' % (new_book.title.encode('ascii', 'replace'), ', '.join(new_book.formats))
+          merged_books.append(new_book)
 
           found = True
           book.formats += new_book.formats
@@ -263,40 +279,82 @@ def load_data(data_file_path, delimiter = '\t', encoding = 'cp1250', parser = No
       if not found:
         BOOKS.append(new_book)
 
-        for property in ['authors', 'publishers', 'genres', 'subjects', 'tags', 'series']:
+        for property in ['authors', 'publishers', 'genres', 'subjects', 'tags', 'series', 'formats']:
           entries = getattr(new_book, property)
           if entries != None:
             for entry in entries:
               entry.books.append(new_book)
 
+  print '%i merged books' % len(merged_books)
+  for book in sorted(merged_books, key = lambda x: x.title):
+    print 'Merged books: "%s" (%s)' % (book.title.encode('ascii', 'replace'), ', '.join([f.uid for f in book.formats]))
+
 def gen_lists(data_dir_path):
-  loader = mako.lookup.TemplateLookup(directories = workdir, module_directory = workdir, output_encoding = 'utf-8', encoding_errors = 'replace')
-  tmpl = loader.get_template('templates/list.mako')
+  def emit_if_not_none(v):
+    if v != None:
+      if type(v) in types.StringTypes:
+        return '%s' % v.encode('ascii', 'xmlcharrefreplace')
+      return '%s' % v
+    return None
 
-  with codecs.open(os.path.join(data_dir_path, 'library-data/authors.coffee'), 'w', 'utf-8') as f:
-    f.write(tmpl.render_unicode(**{'list_name': 'authors', 'LIST': AUTHORS}))
+  def write_index(index_type, entity):
+    index = [book.uid for book in entity.books]
 
-  with codecs.open(os.path.join(data_dir_path, 'library-data/publishers.coffee'), 'w', 'utf-8') as f:
-    f.write(tmpl.render_unicode(**{'list_name': 'publishers', 'LIST': PUBLISHERS}))
+    with codecs.open(os.path.join(data_dir_path, 'library-data', index_type, entity.uid + '.json'), 'w', 'utf-8') as f:
+      f.write(json.dumps(index))
 
-  with codecs.open(os.path.join(data_dir_path, 'library-data/genres.coffee'), 'w', 'utf-8') as f:
-    f.write(tmpl.render_unicode(**{'list_name': 'genres', 'LIST': GENRES}))
+  def write_indexes(index_type, ls):
+    for uid, entity in ls.items():
+      write_index(index_type, entity)
 
-  with codecs.open(os.path.join(data_dir_path, 'library-data/subjects.coffee'), 'w', 'utf-8') as f:
-    f.write(tmpl.render_unicode(**{'list_name': 'subjects', 'LIST': SUBJECTS}))
+  def write_list(list_type, ls):
+    list = collections.OrderedDict()
 
-  with codecs.open(os.path.join(data_dir_path, 'library-data/tags.coffee'), 'w', 'utf-8') as f:
-    f.write(tmpl.render_unicode(**{'list_name': 'tags', 'LIST': TAGS}))
+    for uid in sorted(ls.keys(), cmp = locale.strcoll, key = lambda uid: ls[uid].name):
+      entry = ls[uid]
+      list[entry.uid] = {
+        'name':			entry.name.encode('ascii', 'xmlcharrefreplace'),
+        'uid':			entry.uid
+      }
 
-  with codecs.open(os.path.join(data_dir_path, 'library-data/series.coffee'), 'w', 'utf-8') as f:
-    f.write(tmpl.render_unicode(**{'list_name': 'series', 'LIST': SERIES}))
+    with codecs.open(os.path.join(data_dir_path, 'library-data', list_type, 'list.json'), 'w', 'utf-8') as f:
+      f.write(json.dumps(list))
 
-  with codecs.open(os.path.join(data_dir_path, 'library-data/formats.coffee'), 'w', 'utf-8') as f:
-    f.write(tmpl.render_unicode(**{'list_name': 'formats', 'LIST': FORMATS}))
+  lists = [
+    ('author', AUTHORS),
+    ('publisher', PUBLISHERS),
+    ('genre', GENRES),
+    ('subject', SUBJECTS),
+    ('tag', TAGS),
+    ('serie', SERIES),
+    ('format', FORMATS)
+  ]
 
-  tmpl = loader.get_template('templates/books.mako')
-  with codecs.open(os.path.join(data_dir_path, 'library-data/books.coffee'), 'w', 'utf-8') as f:
-    f.write(tmpl.render_unicode(**{'BOOKS': BOOKS}))
+  for index_type, ls in lists:
+    write_indexes(index_type, ls)
+
+  for list_type, ls in lists:
+    write_list(list_type, ls)
+
+  for book in BOOKS:
+    jbook = {
+      'uid':			book.uid,
+      'title':			emit_if_not_none(book.title),
+      'subtitle':		emit_if_not_none(book.subtitle),
+      'authors':		[author.uid for author in book.authors],
+      'genres':			[genre.uid for genre in book.genres],
+      'subjects':		[subject.uid for subject in book.subjects],
+      'publishers':		[publisher.uid for publisher in book.publishers] if book.publishers else [],
+      'publication_year':	book.publication_year if book.publication_year else None,
+      'series':			[serie.uid for serie in book.series] if book.series else None,
+      'issue':			emit_if_not_none(book.issue),
+      'front_cover':		book.front_cover if book.front_cover else None,
+      'formats':		[format.uid for format in book.formats if format.uid not in FORMATS_HIDDEN],
+      'download_prefix':	book.download_prefix if book.download_prefix else None
+    }
+
+    with codecs.open(os.path.join(data_dir_path, 'library-data/books/' + book.uid + '.json'), 'w', 'utf-8') as f:
+      f.write(json.dumps(jbook))
 
 def main():
   load_data(sys.argv[1], encoding = 'cp1250', delimiter = '\t', parser = ParserBookCollector())
