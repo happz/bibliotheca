@@ -298,6 +298,9 @@ refresh_book_list = (bl) ->
 
       $('#book_info').html book_info_tmpl book
 
+      $('.book-front-cover').error () ->
+        $('.book-front-cover').hide()
+
       refresh_ui()
 
       $('.author-link').click (event) ->
